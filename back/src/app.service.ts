@@ -11,6 +11,7 @@ export class AppService {
       return {
         success: true,
         message: '로그인 성공',
+        userId: 'test',
         // 토큰 발급 추가
       };
     }

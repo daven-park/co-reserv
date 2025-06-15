@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 const HeaderContainer = styled.header`
@@ -71,15 +71,34 @@ const Button = styled.button`
   }
 `;
 
-const Header: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #333;
+  font-weight: 500;
+`;
+
+const UserName = styled.span`
+  color: #007bff;
+`;
+
+interface HeaderProps {
+  isLoggedIn: boolean;
+  userInfo: { userId: string } | null;
+  onLogout: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ isLoggedIn, userInfo, onLogout }) => {
+  const navigate = useNavigate();
 
   const handleLogin = () => {
-    setIsLoggedIn(true);
+    navigate('/login');
   };
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    onLogout();
+    navigate('/');
   };
 
   return (
@@ -89,7 +108,7 @@ const Header: React.FC = () => {
         <NavLinks>
           <NavLink to="/">홈</NavLink>
           <NavLink to="/reservation">예약하기</NavLink>
-          <NavLink to="/my-reservations">내 예약</NavLink>
+          {isLoggedIn && <NavLink to="/my-reservations">내 예약</NavLink>}
         </NavLinks>
         <AuthButtons>
           {!isLoggedIn ? (
@@ -97,9 +116,14 @@ const Header: React.FC = () => {
               로그인
             </Button>
           ) : (
-            <Button className="logout" onClick={handleLogout}>
-              로그아웃
-            </Button>
+            <UserInfo>
+              <NavLink to="/my-page">
+                <UserName>{userInfo?.userId}님</UserName>
+              </NavLink>
+              <Button className="logout" onClick={handleLogout}>
+                로그아웃
+              </Button>
+            </UserInfo>
           )}
         </AuthButtons>
       </Nav>

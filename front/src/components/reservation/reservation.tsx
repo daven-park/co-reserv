@@ -58,7 +58,7 @@ const TimeSlot = styled.button<{ isAvailable: boolean }>`
   }
 `;
 
-const Main: React.FC = () => {
+const Reservation: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
@@ -117,4 +117,4 @@ const Main: React.FC = () => {
   );
 };
 
-export default Main;
+export default Reservation;
