@@ -1,0 +1,31 @@
+@font-face {
+  font-family: 'Gmarket sans';
+  font-style: normal;
+  font-weight: lighter;
+  src: url('./GmarketSansLight.woff') format('woff');
+}
+@font-face {
+  font-family: 'Gmarket sans';
+  font-style: normal;
+  font-weight: 500;
+  src: url('./GmarketSansMedium.woff');
+}
+@font-face {
+  font-family: 'Gmarket sans';
+  font-style: normal;
+  font-weight: bold;
+  src: url('./GmarketSansBold.woff');
+}
+
+/* 전체 폰트 적용 */
+* {
+  font-family: 'Gmarket sans', sans-serif;
+  font-weight: 500; /* 기본값으로 medium 설정 */
+}
+
+/* 네비게이션 바 bold 설정 */
+nav,
+.navbar,
+.nav {
+  font-weight: bold;
+}
