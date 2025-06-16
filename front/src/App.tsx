@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import Header from './components/Header';
 import Main from './components/Main';
 import Footer from './components/Footer';
-import Reservation from './components/reservation/reservation';
+import Reservation from './components/Reservation/Reservation';
 import Login from './components/User/Login';
 
 const AppContainer = styled.div`
