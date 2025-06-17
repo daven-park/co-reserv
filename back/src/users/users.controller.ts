@@ -31,4 +31,32 @@ export class UsersController {
       );
     }
   }
+  @Post('register')
+  async register(
+    @Body()
+    registerData: {
+      userId: string;
+      userName: string;
+      password: string;
+      email: string;
+    },
+  ) {
+    try {
+      const user = await this.usersService.register(
+        registerData.userId,
+        registerData.userName,
+        registerData.password,
+        registerData.email,
+      );
+      return {
+        success: true,
+        message: `회원가입 성공 : ${user.userId}`,
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || '회원가입 처리 중 오류가 발생했습니다.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+  }
 }

@@ -20,6 +20,9 @@ export class User {
   @Column()
   name: string;
 
+  @Column()
+  email: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
