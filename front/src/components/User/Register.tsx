@@ -1,4 +1,5 @@
-import { ChangeEvent, FC, useState } from 'react';
+import { ChangeEvent, FC, FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 const RegisterContainer = styled.div`
@@ -54,6 +55,11 @@ const Input = styled.input`
   }
 `;
 
+const ErrorText = styled.h5`
+  color: #007bff;
+  font-size: 0.8rem;
+`;
+
 const Button = styled.button`
   padding: 10px 20px;
   background: #007bff;
@@ -62,7 +68,6 @@ const Button = styled.button`
   border-radius: 4px;
   cursor: pointer;
   font-size: 1rem;
-  margin-top: 1rem;
 
   &:hover {
     background: #0056b3;
@@ -73,6 +78,7 @@ interface RegisterInfo {
   userId: string;
   userName: string;
   password: string;
+  passwordCheck: string;
   email: string;
 }
 
@@ -81,32 +87,78 @@ const Register: FC = () => {
     userId: '',
     userName: '',
     password: '',
+    passwordCheck: '',
     email: '',
   });
-  const [passwordCheck, setPasswordCheck] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setRegisterInfo((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const sendRegisterInfo = () => {
-    // validation 체크
-    if (registerInfo.password !== passwordCheck) {
+  const validation = () => {
+    // Todo : 아이디 중복 체크
+    if (registerInfo.userId.trim().length === 0) {
+      setError('아이디를 입력하세요');
+      return false;
+    }
+
+    if (registerInfo.userName.trim().length === 0) {
+      setError('이름을 입력하세요');
+      return false;
+    }
+
+    if (registerInfo.password.trim().length === 0) {
+      setError('비밀번호를 입력하세요');
+      return false;
+    }
+
+    // Todo : 이메일 중복 체크
+    if (registerInfo.email.trim().length === 0) {
+      setError('이메일을 입력하세요');
+      return false;
+    }
+
+    if (registerInfo.password !== registerInfo.passwordCheck) {
+      setError('비밀번호가 일치하지 않습니다');
+      return false;
+    }
+    return true;
+  };
+
+  const sendRegisterInfo = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!validation()) {
       return;
     }
 
     try {
-      // TODO : Post 회원가입 요청
+      const response = await fetch('http://localhost:8000/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: registerInfo.userId,
+          userName: registerInfo.userName,
+          password: registerInfo.password,
+          email: registerInfo.email,
+        }),
+      });
+      alert(response);
     } catch (error) {
       console.error('회원가입 요청 오류', error);
     }
 
-    // 요청 완료되었으면 정리
-    setPasswordCheck('');
+    navigate('/login');
   };
 
   return (
@@ -116,25 +168,55 @@ const Register: FC = () => {
         <RegisterForm>
           <InputGroup>
             <Label htmlFor="userId">아이디</Label>
-            <Input id="userId" type="text" value={registerInfo?.userId} onChange={handleChange} />
+            <Input
+              id="userId"
+              type="text"
+              name="userId"
+              value={registerInfo.userId}
+              onChange={handleInputChange}
+            />
           </InputGroup>
           <InputGroup>
             <Label htmlFor="userName">이름</Label>
-            <Input id="userName" type="text" value={registerInfo?.userName} />
+            <Input
+              id="userName"
+              type="text"
+              name="userName"
+              value={registerInfo.userName}
+              onChange={handleInputChange}
+            />
           </InputGroup>
           <InputGroup>
             <Label htmlFor="password">비밀번호</Label>
-            <Input id="password" type="password" value={registerInfo?.password} />
+            <Input
+              id="password"
+              type="password"
+              name="password"
+              value={registerInfo.password}
+              onChange={handleInputChange}
+            />
           </InputGroup>
           <InputGroup>
             <Label htmlFor="password2">비밀번호 확인</Label>
-            <Input id="password2" type="password" value={passwordCheck} />
+            <Input
+              id="password2"
+              type="password"
+              name="passwordCheck"
+              value={registerInfo.passwordCheck}
+              onChange={handleInputChange}
+            />
           </InputGroup>
           <InputGroup>
             <Label htmlFor="email">이메일</Label>
-            <Input id="email" type="text" value={registerInfo?.email} />
+            <Input
+              id="email"
+              type="text"
+              name="email"
+              value={registerInfo.email}
+              onChange={handleInputChange}
+            />
           </InputGroup>
-          {'validation 체크 문자 표시'}
+          <ErrorText>{error}</ErrorText>
           <Button type="submit" onClick={sendRegisterInfo}>
             회원가입
           </Button>
