@@ -1,6 +1,7 @@
-import React, { FC, useState } from 'react';
+import React, { FC, useState, FormEvent } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../../util/auth';
 
 const LoginContainer = styled.div`
   display: flex;
@@ -76,42 +77,57 @@ const ErrorMessage = styled.div`
   margin-top: 0.5rem;
 `;
 
+const SuccessMessage = styled.div`
+  color: #28a745;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+`;
+
 interface LoginProps {
-  onLoginSuccess: (userData: { userId: string }) => void;
+  setIsLoggedIn: (value: boolean) => void;
+  setUserInfo: (user: { userId: string } | null) => void;
 }
 
-const Login: FC<LoginProps> = ({ onLoginSuccess }) => {
+const Login: FC<LoginProps> = ({ setIsLoggedIn, setUserInfo }) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+    setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('로그인에 실패했습니다.');
-      }
-
-      const data = await response.json();
-      onLoginSuccess(data);
-      localStorage.setItem('token', data.token);
-      navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+      console.log('로그인 시도:', userId);
+      const user = await login(userId, password);
+      console.log('로그인 성공:', user);
+      
+      // 상태 업데이트
+      setIsLoggedIn(true);
+      setUserInfo(user);
+      setSuccess('로그인되었습니다.');
+      
+      // 토큰이 제대로 저장되었는지 확인
+      const token = localStorage.getItem('token');
+      console.log('저장된 토큰 확인:', !!token);
+      
+      // 홈페이지로 이동 전 약간의 지연
+      console.log('홈페이지로 이동 예정...');
+      setTimeout(() => {
+        console.log('홈페이지로 이동 중...');
+        navigate('/', { replace: true });
+      }, 1500);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '로그인에 실패했습니다.';
+      console.error('로그인 오류:', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -129,6 +145,7 @@ const Login: FC<LoginProps> = ({ onLoginSuccess }) => {
               onChange={(e) => setUserId(e.target.value)}
               placeholder="아이디를 입력하세요"
               required
+              disabled={isLoading}
             />
           </InputGroup>
           <InputGroup>
@@ -140,11 +157,15 @@ const Login: FC<LoginProps> = ({ onLoginSuccess }) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="비밀번호를 입력하세요"
               required
+              disabled={isLoading}
             />
           </InputGroup>
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          <Button type="submit">로그인</Button>
-          <Button type="button" onClick={() => navigate('/register')}>
+          {success && <SuccessMessage>{success}</SuccessMessage>}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? '로그인 중...' : '로그인'}
+          </Button>
+          <Button type="button" onClick={() => navigate('/register')} disabled={isLoading}>
             회원가입
           </Button>
         </Form>

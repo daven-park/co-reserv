@@ -103,32 +103,35 @@ const Register: FC = () => {
   };
 
   const validation = () => {
-    // Todo : 아이디 중복 체크
-    if (registerInfo.userId.trim().length === 0) {
-      setError('아이디를 입력하세요');
+    // userId 검증
+    if (!/^[a-zA-Z0-9]{4,}$/.test(registerInfo.userId)) {
+      setError('아이디는 영문자와 숫자만 사용 가능하며, 4자 이상이어야 합니다.');
       return false;
     }
 
-    if (registerInfo.userName.trim().length === 0) {
-      setError('이름을 입력하세요');
+    // userName 검증
+    if (registerInfo.userName.trim().length < 2) {
+      setError('이름은 2자 이상이어야 합니다.');
       return false;
     }
 
-    if (registerInfo.password.trim().length === 0) {
-      setError('비밀번호를 입력하세요');
+    // password 검증
+    if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/.test(registerInfo.password)) {
+      setError('비밀번호는 영문자와 숫자를 포함하여 6자 이상이어야 합니다.');
       return false;
     }
 
-    // Todo : 이메일 중복 체크
-    if (registerInfo.email.trim().length === 0) {
-      setError('이메일을 입력하세요');
+    // email 검증
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerInfo.email)) {
+      setError('올바른 이메일 형식이 아닙니다.');
       return false;
     }
 
     if (registerInfo.password !== registerInfo.passwordCheck) {
-      setError('비밀번호가 일치하지 않습니다');
+      setError('비밀번호가 일치하지 않습니다.');
       return false;
     }
+
     return true;
   };
 
@@ -153,12 +156,19 @@ const Register: FC = () => {
           email: registerInfo.email,
         }),
       });
-      alert(response);
-    } catch (error) {
-      console.error('회원가입 요청 오류', error);
-    }
 
-    navigate('/login');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || '회원가입에 실패했습니다.');
+      }
+
+      alert('회원가입이 완료되었습니다.');
+      navigate('/login');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '회원가입에 실패했습니다.';
+      setError(errorMessage);
+    }
   };
 
   return (

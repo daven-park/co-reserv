@@ -1,154 +1,227 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Calendar from 'react-calendar';
 import styled from 'styled-components';
+import { fetchWithAuth } from '../util/auth';
+import { getUser } from '../util/auth';
+import 'react-calendar/dist/Calendar.css';
 
 const CalendarContainer = styled.div`
-  margin-bottom: 20px;
-`;
-
-const CalendarHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-`;
-
-const CalendarGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-`;
-
-const MonthButton = styled.button`
-  padding: 5px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-
-  &:hover {
-    background: #f0f0f0;
+  .react-calendar {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    font-family: 'Pretendard', sans-serif;
   }
-`;
 
-const MonthTitle = styled.h2`
-  font-size: 1.2rem;
-  color: #333;
-`;
+  .react-calendar__tile {
+    min-width: 36px;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+    font-size: 14px;
+    text-align: center;
+    word-break: keep-all;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-const WeekDayHeader = styled.div`
-  text-align: center;
-  font-weight: bold;
-  padding: 5px;
-  color: #666;
-  background: #f8f9fa;
-  border-radius: 4px;
-`;
+    &:hover {
+      background-color: #f0f0f0;
+    }
 
-const DayCell = styled.div<{ isSelected?: boolean; isToday?: boolean; isCurrentMonth?: boolean }>`
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-  border-radius: 4px;
-  background: ${(props) => {
-    if (props.isSelected) return '#007bff';
-    if (props.isToday) return '#e6f3ff';
-    return 'transparent';
-  }};
-  color: ${(props) => {
-    if (props.isSelected) return 'white';
-    if (!props.isCurrentMonth) return '#ccc';
-    return 'inherit';
-  }};
+    &:enabled:hover,
+    &:enabled:focus {
+      background-color: #e6e6e6;
+    }
 
-  &:hover {
-    background: ${(props) => (props.isSelected ? '#0056b3' : '#f0f0f0')};
+    abbr {
+      text-decoration: none;
+      font-size: 14px;
+      min-width: 2.5em;
+      white-space: nowrap;
+      display: inline-block;
+    }
+  }
+
+  .react-calendar__tile--active {
+    background-color: #007bff !important;
+    color: white;
+  }
+
+  .react-calendar__tile--now {
+    background-color: #e6f3ff;
+    color: #007bff;
+  }
+
+  .react-calendar__tile--hasReservation {
+    color: #28a745;
+    font-weight: bold;
+  }
+
+  .react-calendar__tile--hasBoard {
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      background-color: #007bff;
+      border-radius: 50%;
+    }
+  }
+
+  .react-calendar__month-view__days__day--neighboringMonth {
+    color: #ccc;
+  }
+
+  .react-calendar__navigation button {
+    min-width: 44px;
+    background: none;
+    font-size: 16px;
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 8px;
+
+    &:enabled:hover,
+    &:enabled:focus {
+      background-color: #f0f0f0;
+    }
+  }
+
+  .react-calendar__navigation__label {
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  /* 날짜 표시 커스텀 */
+  .react-calendar__tile abbr {
+    position: relative;
+    display: inline-block;
+    min-width: 2.5em;
+    white-space: nowrap;
+  }
+
+  .react-calendar__tile abbr::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1px;
+    background: transparent;
+  }
+
+  /* 일요일 날짜만 빨간색 */
+  .react-calendar__month-view__days__day--weekend:nth-child(7n + 1) {
+    color: #dc3545;
+  }
+  /* 요일 헤더 일요일도 빨간색 */
+  .react-calendar__month-view__weekdays__weekday:first-child {
+    color: #dc3545;
   }
 `;
 
 interface CalendarProps {
-  selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
 }
 
-function Calendar({ selectedDate, onDateSelect }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+// 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+function formatDateToYMD(date: Date) {
+  // 로컬 시간대 기준으로 날짜 문자열 생성
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
-  const getDaysInMonth = (date: Date): Date[] => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
+// 날짜 문자열에 하루를 더하는 함수
+function addOneDay(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + 1);
+  return formatDateToYMD(date);
+}
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+const CalendarComponent: React.FC<CalendarProps> = ({ onDateSelect }) => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [reservedDates, setReservedDates] = useState<string[]>([]);
+  const [boardDates, setBoardDates] = useState<string[]>([]);
 
-    const prevMonthDays = Array.from(
-      { length: firstDay.getDay() },
-      (_, i) => new Date(year, month, 0 - i)
-    ).reverse();
+  useEffect(() => {
+    const fetchReservedDates = async () => {
+      try {
+        const response = await fetchWithAuth('http://localhost:8000/reservations');
+        if (response.ok) {
+          const data = await response.json();
+          const currentUser = getUser();
+          const dates = data
+            .filter(
+              (reservation: any) =>
+                !reservation.isCanceled && reservation.userId === currentUser?.userId
+            )
+            .map((reservation: any) => reservation.date.slice(0, 10));
+          setReservedDates(dates);
+        }
+      } catch (error) {
+        console.error('예약 날짜를 불러오는데 실패했습니다:', error);
+      }
+    };
 
-    const currentMonthDays = Array.from(
-      { length: lastDay.getDate() },
-      (_, i) => new Date(year, month, i + 1)
-    );
+    const fetchBoardDates = async () => {
+      try {
+        const response = await fetchWithAuth('http://localhost:8000/boards');
+        if (response.ok) {
+          const data = await response.json();
+          // 날짜 문자열을 가져와서 하루를 더해 시간대 문제 해결
+          const dates = data.map((board: any) => {
+            const dateStr = board.date.slice(0, 10);
+            // 하루를 더해 시간대 문제 해결
+            return addOneDay(dateStr);
+          });
+          console.log('게시글 날짜:', dates);
+          setBoardDates(dates);
+        }
+      } catch (error) {
+        console.error('게시판 날짜를 불러오는데 실패했습니다:', error);
+      }
+    };
 
-    const totalDays = prevMonthDays.length + currentMonthDays.length;
-    const remainingDays = 42 - totalDays;
+    fetchReservedDates();
+    fetchBoardDates();
+  }, []);
 
-    const nextMonthDays = Array.from(
-      { length: remainingDays },
-      (_, i) => new Date(year, month + 1, i + 1)
-    );
-
-    return [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
+  const handleDateChange = (value: Date | Date[]) => {
+    if (value instanceof Date) {
+      setSelectedDate(value);
+      onDateSelect(value);
+    }
   };
 
-  const changeMonth = (delta: number) => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + delta, 1));
-  };
+  const tileClassName = ({ date }: { date: Date }) => {
+    // 달력의 날짜를 로컬 시간대 기준으로 변환
+    const dateStr = formatDateToYMD(date);
+    
+    const hasReservation = reservedDates.includes(dateStr);
+    const hasBoard = boardDates.includes(dateStr);
 
-  const isSelected = (date: Date) => {
-    if (!selectedDate) return false;
-    return date.toDateString() === selectedDate.toDateString();
+    return [
+      hasReservation ? 'react-calendar__tile--hasReservation' : '',
+      hasBoard ? 'react-calendar__tile--hasBoard' : '',
+    ].join(' ');
   };
-
-  const isToday = (date: Date): boolean => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
-
-  const isCurrentMonth = (date: Date): boolean => {
-    return date.getMonth() === currentDate.getMonth();
-  };
-
-  const days = getDaysInMonth(currentDate);
-  const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
   return (
     <CalendarContainer>
-      <CalendarHeader>
-        <MonthButton onClick={() => changeMonth(-1)}>이전</MonthButton>
-        <MonthTitle>
-          {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-        </MonthTitle>
-        <MonthButton onClick={() => changeMonth(1)}>다음</MonthButton>
-      </CalendarHeader>
-      <CalendarGrid>
-        {weekDays.map((day) => (
-          <WeekDayHeader key={day}>{day}</WeekDayHeader>
-        ))}
-        {days.map((date, index) => (
-          <DayCell
-            key={index}
-            isSelected={isSelected(date)}
-            isToday={isToday(date)}
-            isCurrentMonth={isCurrentMonth(date)}
-            onClick={() => onDateSelect(date)}
-          >
-            {isCurrentMonth(date) ? date.getDate() : ''}
-          </DayCell>
-        ))}
-      </CalendarGrid>
+      <Calendar onChange={handleDateChange} value={selectedDate} tileClassName={tileClassName} />
     </CalendarContainer>
   );
-}
+};
 
-export default Calendar;
+export default CalendarComponent;
